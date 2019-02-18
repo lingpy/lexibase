@@ -13,6 +13,8 @@ from csvw.dsv import UnicodeWriter
 
 from lexibase.util import download, stringval
 
+__all__ = ['LexiBase']
+
 
 @contextlib.contextmanager
 def cursor(fname):
@@ -81,14 +83,14 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
         converter = {value: {self[k, 'concept']: self[k, value] for k in self} for value in values}
 
         # now, create the wordlist
-        D = {0: ['doculect', 'concept'] + values}
+        d = {0: ['doculect', 'concept'] + values}
         for idx, k in enumerate(self.concepts, start=1):
-            D[idx] = [doculect, k] + [converter[value][k] for value in values]
+            d[idx] = [doculect, k] + [converter[value][k] for value in values]
 
-        wl = lingpy.Wordlist(D)
+        wl = lingpy.Wordlist(d)
         self.add_data(wl)
         print('Successfully added new doculect template for {0}'.format(doculect))
-    
+
     def remove_values(self, value, column):
         """
         Remove all values which match the target specification in the given
@@ -100,7 +102,7 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
                 blacklist.append(k)
 
         self.blacklist.extend(blacklist)
-        print("Expanded blacklist ({0} items), modifications will be carried out when updating the db.".format(len(blacklist)))
+        print("Expanded blacklist ({0} items), requires update to persist.".format(len(blacklist)))
 
     def modify_value(self, source, target, column):
         """
@@ -116,7 +118,7 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
         with self.cursor(dbase) as cu:
             cu.execute('vacuum')
 
-    def remove_empty_rows(self, doculect, entries=('entry_in_source', 'ipa','tokens')):
+    def remove_empty_rows(self, doculect, entries=('entry_in_source', 'ipa', 'tokens')):
         """
         Remove rows which do not contain any data.
         """
@@ -129,7 +131,7 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
 
         blacklist = []
         for k in self:
-            if self[k,'doculect'] == doculect:
+            if self[k, 'doculect'] == doculect:
                 if not check([self[k, entry] for entry in entries]):
                     blacklist.append(k)
         print('Added {0} entries to the blacklist.'.format(len(blacklist)))
@@ -162,7 +164,7 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
 
             for h in headline:
                 if h in headers:
-                    entry = wordlist[k,h]
+                    entry = wordlist[k, h]
                     if type(entry) == list:
                         entry = ' '.join([str(x) for x in entry])
                     new_line.append(entry)
@@ -183,13 +185,14 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
         ignore = ignore or []
 
         # write a log for the blacklist
-        with UnicodeWriter(dbase.parent.joinpath(lingpy.rc('timestamp')+'-blacklist.log')) as w:
+        with UnicodeWriter(dbase.parent.joinpath(lingpy.rc('timestamp') + '-blacklist.log')) as w:
             w.writerow(['ID'] + sorted(self.header, key=lambda x: self.header[x]))
             w.writerows([[str(k)] + [stringval(e) for e in self[k]] for k in self.blacklist])
 
         with self.cursor(dbase) as cu:
             cu.execute(
-                "CREATE TABLE IF NOT EXISTS backup (file TEXT, id INT, col TEXT, val TEXT, date TEXT, user TEXT)")
+                "CREATE TABLE IF NOT EXISTS backup "
+                "(file TEXT, id INT, col TEXT, val TEXT, date TEXT, user TEXT)")
             cu.execute(
                 "CREATE TABLE IF NOT EXISTS {0} (id INT, col TEXT, val TEXT)".format(table))
             cu.execute("DELETE FROM {0}".format(table))
@@ -228,10 +231,12 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
 
                     modified += 1
                     cu.execute(
-                        "INSERT INTO backup (file, id, col, val, date, user) VALUES (?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO backup (file, id, col, val, date, user) "
+                        "VALUES (?, ?, ?, ?, ?, ?)",
                         (table, id_, col, datad[id_, col], time, 'lingpy'))
                     if verbose:
-                        print("[i] Inserting value {0} for ID={1} and COL={2}...".format(val, id_, col))
+                        print("[i] Inserting value {0} for ID={1} and COL={2}...".format(
+                            val, id_, col))
                     if update:
                         cu.execute(
                             "UPDATE {0} SET val = ? WHERE id = ? AND col = ?".format(table),

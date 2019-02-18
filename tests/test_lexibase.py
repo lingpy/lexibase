@@ -4,7 +4,8 @@ import itertools
 
 import pytest
 
-from lexibase import LexiBase, cursor
+from lexibase import LexiBase
+from lexibase.lexibase import cursor
 
 
 @pytest.fixture
@@ -24,6 +25,11 @@ def germanic(tmpdir):
     tmpdb = str(tmpdir.join('germanic.sqlite3'))
     copy(str(Path(__file__).parent.joinpath('germanic.sqlite3')), tmpdb)
     return LexiBase.from_dbase(dbase=tmpdb)
+
+
+def test_LexiBase_from_triples():
+    res = LexiBase(str(Path(__file__).parent / 'test.triples'))
+    assert len(res) == 1
 
 
 def test_LexiBase_from_url(mocker, germanic):
@@ -61,7 +67,7 @@ def test_LexiBase_update(lexibase_instance):
     lb.update()
 
 
-def test_LexiBase_add_data(tmpdb):
+def test_LexiBase_add_data(tmpdb, capsys):
     class Wordlist(dict):
         def __init__(self, *entries):
             dict.__init__(self)
@@ -77,26 +83,29 @@ def test_LexiBase_add_data(tmpdb):
 
     lb = LexiBase({0: ['id', 'doculect', 'concept']}, dbase=tmpdb)
     lb.create()
-    idx = lb.add_data(Wordlist(dict(id=2, doculect='Spanish', x='4', concept='hand', ipa='mano')))
+    idx = lb.add_data(Wordlist(dict(id=2, doculect='Spanish', x=(1, 2), concept='hand', ipa='mano')))
     assert idx
-    assert lb[idx, 'X'] == '4'
+    assert lb[idx, 'X'] == (1, 2)
 
-    assert len(lb.modify_value('4', 'xyz', 'x')) == 1
+    assert len(lb.modify_value((1, 2), 'xyz', 'x')) == 1
     assert lb[idx, 'X'] == 'xyz'
 
-    assert lb.update() == 5
+    assert lb.update(verbose=True) == 5
+    lb.modify_value('xyz', 'abc', 'x')
+    assert lb.update()
     assert (1, 'DOCULECT', 'Spanish') in lb.fetchall("select * from {0}".format(lb.dbase.stem))
     assert len(lb.remove_empty_rows('Spanish', ('y'))) == 1
-    lb.add_doculect('Newlang', [])
 
 
 def test_germanic(germanic, capsys):
     ids = [r[0] for r in germanic.fetchall("select id from germanic")]
     assert len(ids) == 13554
 
+    germanic.remove_empty_rows('German')
     germanic.remove_values('German', 'DOCULECT')
     germanic.update()
     assert germanic.fetchall("select count(*) from germanic")[0][0] == 9826
+    germanic.add_doculect('Newlang', [])
 
 
 def test_roundtrip_list_valued():

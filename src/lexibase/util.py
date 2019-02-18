@@ -1,6 +1,8 @@
-import urllib.request
+from urllib.request import urlretrieve
 
 from tqdm import tqdm
+
+__all__ = ['stringval', 'download']
 
 
 def stringval(val):
@@ -19,4 +21,4 @@ class DownloadProgressBar(tqdm):
 def download(url, output_path):
     with DownloadProgressBar(
             unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]) as t:
-        urllib.request.urlretrieve(url, filename=str(output_path), reporthook=t.update_to)
+        urlretrieve(url, filename=str(output_path), reporthook=t.update_to)

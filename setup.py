@@ -1,14 +1,9 @@
-# import distribute_setup
-# distribute_setup.use_setuptools()
-
 from setuptools import setup, find_packages
 import codecs
 
-# setup package name etc as a default
-pkgname = 'lexibase'
 
 setup(
-    name=pkgname,
+    name='lexibase',
     description="An SQLITE3 extension for handling wordlists in LingPy and EDICTOR.",
     version='0.1.0',
     packages=find_packages(where='src'),
