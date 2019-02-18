@@ -9,7 +9,9 @@ import datetime
 import pathlib
 import contextlib
 
-from lexibase.util import download
+from csvw.dsv import UnicodeWriter
+
+from lexibase.util import download, stringval
 
 
 @contextlib.contextmanager
@@ -144,7 +146,7 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
 
         # we make a nasty shortcut here by assuming that concept column will always be there
         for nh in [k for k in headers if k not in self.header]:
-            print('ADDING HEADERS')
+            print('ADDING HEADERS: {0}'.format(nh))
             self.add_entries(nh, 'concept', lambda x: '')
 
         # now we start manipulating the dictionary, first we need to check for
@@ -181,17 +183,9 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
         ignore = ignore or []
 
         # write a log for the blacklist
-        with dbase.parent.joinpath(lingpy.rc('timestamp')+'-blacklist.log').open('w') as f:
-            f.write('ID'+'\t'+'\t'.join(sorted(self.header, key=lambda x:
-                self.header[x])))
-            for k in self.blacklist:
-                line = [str(k)]
-                for entry in self[k]:
-                    if isinstance(entry, list):
-                        line += [' '.join([str(x) for x in entry])]
-                    else:
-                        line += [str(entry)]
-                f.write('\t'.join(line)+'\n')
+        with UnicodeWriter(dbase.parent.joinpath(lingpy.rc('timestamp')+'-blacklist.log')) as w:
+            w.writerow(['ID'] + sorted(self.header, key=lambda x: self.header[x]))
+            w.writerows([[str(k)] + [stringval(e) for e in self[k]] for k in self.blacklist])
 
         with self.cursor(dbase) as cu:
             cu.execute(
@@ -225,12 +219,12 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
             for id_, col, val in sorted(lingpy.basic.ops.tsv2triple(self, False)):
                 if (col.lower() in ignore) or (id_ in ignore) or (id_ in self.blacklist):
                     continue
+                val = stringval(val)
                 if val != '' and ((id_, col) not in datad or (datad[id_, col] != val)):
+                    update = True
                     if (id_, col) not in datad:
+                        update = False
                         datad[id_, col] = ''
-
-                    if isinstance(val, (tuple, list)):
-                        val = ' '.join([str(x) for x in val])
 
                     modified += 1
                     cu.execute(
@@ -238,9 +232,14 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
                         (table, id_, col, datad[id_, col], time, 'lingpy'))
                     if verbose:
                         print("[i] Inserting value {0} for ID={1} and COL={2}...".format(val, id_, col))
-                    cu.execute(
-                        "UPDATE {0} SET val = ? WHERE id = ? AND col = ?".format(table),
-                        (val, id_, col))
+                    if update:
+                        cu.execute(
+                            "UPDATE {0} SET val = ? WHERE id = ? AND col = ?".format(table),
+                            (val, id_, col))
+                    else:
+                        cu.execute(
+                            "INSERT INTO {0} (id, col, val) VALUES (?, ?, ?)".format(table),
+                            (id_, col, val))
 
             for id_ in self.blacklist:
                 cu.execute('DELETE FROM {0} WHERE id = ?'.format(table), (id_,))

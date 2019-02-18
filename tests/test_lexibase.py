@@ -26,6 +26,15 @@ def germanic(tmpdir):
     return LexiBase.from_dbase(dbase=tmpdb)
 
 
+def test_LexiBase_from_url(mocker, germanic):
+    def download(url, out):
+        copy(str(Path(__file__).parent.joinpath('germanic.sqlite3')), str(out))
+
+    mocker.patch('lexibase.lexibase.download', download)
+    LexiBase.from_dbase(dbase=germanic.dbase, url='abc')
+    assert list(germanic.dbase.parent.glob('*-backup-*'))
+
+
 def test_LexiBase_cursor(tmpdb):
     lb = LexiBase({0: ['ID', 'DOCULECT', 'CONCEPT']}, dbase=tmpdb)
     with lb.cursor() as cu:
@@ -52,7 +61,7 @@ def test_LexiBase_update(lexibase_instance):
     lb.update()
 
 
-def test_LexiBase_add_data(tmpdb, capsys):
+def test_LexiBase_add_data(tmpdb):
     class Wordlist(dict):
         def __init__(self, *entries):
             dict.__init__(self)
@@ -67,16 +76,18 @@ def test_LexiBase_add_data(tmpdb, capsys):
             return dict.__getitem__(self, item)
 
     lb = LexiBase({0: ['id', 'doculect', 'concept']}, dbase=tmpdb)
-    idx = lb.add_data(Wordlist(dict(id=2, doculect='Spanish', x='4')))
+    lb.create()
+    idx = lb.add_data(Wordlist(dict(id=2, doculect='Spanish', x='4', concept='hand', ipa='mano')))
     assert idx
     assert lb[idx, 'X'] == '4'
 
     assert len(lb.modify_value('4', 'xyz', 'x')) == 1
     assert lb[idx, 'X'] == 'xyz'
 
-    assert len(lb.remove_empty_rows('Spanish')) == 1
-
-    lb.add_doculect('Newlang', ['y'])
+    assert lb.update() == 5
+    assert (1, 'DOCULECT', 'Spanish') in lb.fetchall("select * from {0}".format(lb.dbase.stem))
+    assert len(lb.remove_empty_rows('Spanish', ('y'))) == 1
+    lb.add_doculect('Newlang', [])
 
 
 def test_germanic(germanic, capsys):
@@ -86,3 +97,10 @@ def test_germanic(germanic, capsys):
     germanic.remove_values('German', 'DOCULECT')
     germanic.update()
     assert germanic.fetchall("select count(*) from germanic")[0][0] == 9826
+
+
+def test_roundtrip_list_valued():
+    #
+    # FIXME!
+    #
+    pass

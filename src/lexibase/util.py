@@ -3,6 +3,12 @@ import urllib.request
 from tqdm import tqdm
 
 
+def stringval(val):
+    if isinstance(val, (tuple, list)):
+        return ' '.join([str(v) for v in val])
+    return str(val)
+
+
 class DownloadProgressBar(tqdm):
     def update_to(self, b=1, bsize=1, tsize=None):
         if tsize is not None:
