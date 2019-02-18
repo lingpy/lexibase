@@ -5,7 +5,7 @@ import codecs
 setup(
     name='lexibase',
     description="An SQLITE3 extension for handling wordlists in LingPy and EDICTOR.",
-    version='0.1.0',
+    version='0.1.1.dev0',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     zip_safe=False,
