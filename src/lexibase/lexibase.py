@@ -321,7 +321,7 @@ class LexiBase(lingpy.basic.wordlist.Wordlist):
         # we make a nasty shortcut here by assuming that concept column will
         # always be there 
         for nh in new_heads:
-            print('ADDING HEADERS')
+            print('ADDING HEADERS', nh)
             self.add_entries(nh, 'concept', lambda x: '')
 
         # now we start manipulating the dictionary, first we need to check for
