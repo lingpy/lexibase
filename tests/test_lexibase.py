@@ -4,9 +4,29 @@ import itertools
 
 import pytest
 
-from lexibase import LexiBase
-from lexibase.lexibase import cursor
+from lexibase import LexiBase, cursor, download, stringval
 
+
+@pytest.mark.parametrize(
+    'in_,out',
+    [
+        (None, 'None'),
+        (1, '1'),
+        ([1, 2], '1 2'),
+        (('a', 'b'), 'a b'),
+    ]
+)
+def test_stringval(in_, out):
+    assert stringval(in_) == out
+
+
+def test_download(mocker, capsys):
+    def retrieve(*args, **kw):
+        for i in range(1000):
+            kw['reporthook'](b=i, tsize=1000)
+
+    mocker.patch('lexibase.urlretrieve', retrieve)
+    download('/', None)
 
 @pytest.fixture
 def tmpdb(tmpdir):
@@ -36,7 +56,7 @@ def test_LexiBase_from_url(mocker, germanic):
     def download(url, out):
         copy(str(Path(__file__).parent.joinpath('germanic.sqlite3')), str(out))
 
-    mocker.patch('lexibase.lexibase.download', download)
+    mocker.patch('lexibase.download', download)
     LexiBase.from_dbase(dbase=germanic.dbase, url='abc')
     assert list(germanic.dbase.parent.glob('*-backup-*'))
 

@@ -5,11 +5,12 @@ import codecs
 setup(
     name='lexibase',
     description="An SQLITE3 extension for handling wordlists in LingPy and EDICTOR.",
-    version='0.1.1.dev0',
+    version='1.0.dev0',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
+    py_modules=["lexibase"],
     zip_safe=False,
-    license="GPL",
+    license="MIT",
     include_package_data=True,
     url='https://github.com/lingpy/lexibase',
     long_description=codecs.open('README.md', 'r', 'utf-8').read(),
@@ -17,12 +18,12 @@ setup(
     author='Johann-Mattis List',
     author_email='list@shh.mpg.de',
     keywords='historical linguistics, interface, EDICTOR, LINGPY, SQLITE3',
-    python_requires='>=3.5',
+    python_requires='>=3.8',
     entry_points={
         'console_scripts': ['glottolog=pyglottolog.__main__:main'],
     },
     install_requires=[
-        'lingpy',
+        'lingpy>=2.6.13',
         'csvw',
         'tqdm',
     ],
@@ -33,7 +34,7 @@ setup(
     classifiers=[
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
 )

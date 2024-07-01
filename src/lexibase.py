@@ -11,6 +11,7 @@ import contextlib
 from urllib.request import urlretrieve
 
 from csvw.dsv import UnicodeWriter
+import tqdm
 
 __all__ = ['LexiBase']
 
@@ -23,7 +24,7 @@ def stringval(val):
     return str(val)
 
 
-class DownloadProgressBar(tqdm):
+class DownloadProgressBar(tqdm.tqdm):
     def update_to(self, b=1, bsize=1, tsize=None):
         if tsize is not None:
             self.total = tsize
